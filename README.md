@@ -1,54 +1,38 @@
-⛪ Church Management Web Application
+# 🚀 Project Title
 
-A full-stack platform built with Django REST Framework (backend) and React + Vite (frontend) to help churches manage their community. Features include role-based access control, event scheduling, attendance tracking, announcements, and more — all designed with scalability and extensibility in mind.
+_A one-line description of what the project does and why it’s useful._
 
-🚀 Features
-Authentication & Roles
+---
 
-JWT-based authentication for secure login/logout.
+## ✨ Features
+- ✅ Feature 1 (what it does)
+- ✅ Feature 2 (tech used)
+- ✅ Feature 3 (your contribution)
 
-Role-based access control (Pastor, Deacon, Member).
+---
 
-Leaders can manage events and announcements; members can view and participate.
+## 🛠️ Tech Stack
+![Python](https://img.shields.io/badge/-Python-3776AB?logo=python&logoColor=white)  
+![Flask](https://img.shields.io/badge/-Flask-000000?logo=flask&logoColor=white)  
+![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=black)  
+<!-- Add/remove badges for the tools you actually used -->
 
-Announcements
+---
 
-Leaders create, edit, and delete announcements.
+## 📸 Screenshots / Demo
+![Demo GIF or screenshot](https://via.placeholder.com/800x400.png?text=Add+Screenshot+or+GIF+Here)  
+<!-- Replace with an actual screenshot or GIF -->
 
-Members view announcements in real time.
+---
 
-Events & Attendance
+## ⚡ Getting Started
+```bash
+# Clone the repo
+git clone https://github.com/yourusername/project-name.git
+cd project-name
 
-Leaders can create and update events they own.
+# Install dependencies
+pip install -r requirements.txt
 
-Members can view events and sign up.
-
-Attendance page provides a table view of who signed up for which event, giving leaders insights into participation.
-
-Extensibility & Scalability
-
-Modular React components for future UI features.
-
-Backend designed to support multi-church scalability.
-
-Cloud-ready with room for real-time notifications, logging, and monitoring.
-
-🛠️ Tech Stack
-
-Frontend
-
-React (Vite, Hooks, Context API)
-
-Axios for API communication
-
-Protected routes and role-based conditional rendering
-
-Backend
-
-Django REST Framework
-
-JWT authentication via djangorestframework-simplejwt
-
-PostgreSQL (or SQLite for local dev)
-
-Custom permission classes for fine-grained role logic
+# Run the app
+python app.py

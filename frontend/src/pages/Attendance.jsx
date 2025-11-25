@@ -4,68 +4,124 @@ import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 export default function Attendance() {
-  const { role } = useAuth();
-  const isLeader = (role || "").toLowerCase() === "pastor" || (role || "").toLowerCase() === "deacon";
+  const { user } = useAuth();
+  const isLeader =
+    user?.role === "pastor" || user?.role === "deacon";
+
   const [events, setEvents] = useState([]);
   const [eventId, setEventId] = useState("");
   const [rows, setRows] = useState([]);
+  const [error, setError] = useState("");
 
+  // Load events once
   useEffect(() => {
-    client.get("events/").then(r=>setEvents(r.data));
+    client
+      .get("events/")
+      .then((res) => setEvents(res.data))
+      .catch(() => setError("Failed to load events."));
   }, []);
 
+  // Load attendance when event changes
   useEffect(() => {
     if (!eventId) return;
-    client.get(`attendance/?event=${eventId}`).then(r=>setRows(r.data));
+    client
+      .get(`attendance/?event=${eventId}`)
+      .then((res) => setRows(res.data))
+      .catch(() => setError("Failed to load attendance."));
   }, [eventId]);
 
-  const selectedTitle = events.find(e=>String(e.id)===String(eventId))?.title;
+  async function checkIn() {
+    try {
+      await client.post("attendance/", {
+        event: Number(eventId),
+        status: "in",
+      });
+      const res = await client.get(`attendance/?event=${eventId}`);
+      setRows(res.data);
+    } catch {
+      setError("Failed to check in.");
+    }
+  }
+
+  const selectedEvent = events.find(
+    (e) => String(e.id) === String(eventId)
+  );
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Attendance</h2>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Attendance</h1>
 
-      <label>
-        Event:{" "}
-        <select value={eventId} onChange={(e)=>setEventId(e.target.value)}>
-          <option value="">Select event…</option>
-          {events.map(e=> <option key={e.id} value={e.id}>{e.title}</option>)}
+      {error && <p className="text-red-600 mb-4">{error}</p>}
+
+      {/* Event dropdown */}
+      <div className="mb-6">
+        <label className="block mb-2 font-medium">Select Event</label>
+        <select
+          value={eventId}
+          onChange={(e) => setEventId(e.target.value)}
+          className="border rounded px-3 py-2 w-full"
+        >
+          <option value="">Choose event…</option>
+          {events.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.title}
+            </option>
+          ))}
         </select>
-      </label>
+      </div>
 
+      {/* Attendance table */}
       {eventId && (
         <>
-          <h3 style={{ marginTop: 16 }}>{selectedTitle}</h3>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse" }}>
-              <thead>
+          <h2 className="text-xl font-semibold mb-4">
+            {selectedEvent?.title}
+          </h2>
+
+          <div className="overflow-x-auto shadow border rounded-lg">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-100">
                 <tr>
-                  <th style={th}>User</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Timestamp</th>
+                  <th className="py-2 px-3 text-left border-b">Name</th>
+                  <th className="py-2 px-3 text-left border-b">Status</th>
+                  <th className="py-2 px-3 text-left border-b">Timestamp</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(r=>(
-                  <tr key={r.id}>
-                    <td style={td}>{r.user?.username}</td>
-                    <td style={td}>{r.status}</td>
-                    <td style={td}>{new Date(r.timestamp).toLocaleString()}</td>
+                {rows.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan="3"
+                      className="text-center py-4 text-gray-500"
+                    >
+                      (No attendance yet)
+                    </td>
+                  </tr>
+                )}
+
+                {rows.map((r) => (
+                  <tr key={r.id} className="odd:bg-white even:bg-gray-50">
+                    <td className="py-2 px-3 border-b">
+                      {r.user?.full_name || r.user?.email}
+                    </td>
+                    <td className="py-2 px-3 border-b capitalize">
+                      {r.status}
+                    </td>
+                    <td className="py-2 px-3 border-b">
+                      {new Date(r.timestamp).toLocaleString()}
+                    </td>
                   </tr>
                 ))}
-                {rows.length === 0 && (
-                  <tr><td style={td} colSpan={3}>(No signups yet)</td></tr>
-                )}
               </tbody>
             </table>
           </div>
+
+          {/* Check-in button for members ONLY */}
           {!isLeader && (
-            <button style={{ marginTop: 10 }} onClick={async ()=>{
-              await client.post("attendance/", { event: Number(eventId), status: "in" });
-              const { data } = await client.get(`attendance/?event=${eventId}`);
-              setRows(data);
-            }}>
-              Sign Up / Check In
+            <button
+              onClick={checkIn}
+              className="bg-blue-600 text-white px-4 py-2 rounded mt-4 hover:bg-blue-700"
+            >
+              Check In
             </button>
           )}
         </>
@@ -73,6 +129,3 @@ export default function Attendance() {
     </div>
   );
 }
-
-const th = { textAlign:"left", borderBottom:"1px solid #ddd", padding:"8px" };
-const td = { borderBottom:"1px solid #f0f0f0", padding:"8px" };

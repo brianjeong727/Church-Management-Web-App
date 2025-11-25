@@ -1,77 +1,86 @@
 // src/auth/AuthContext.jsx
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 
-const AuthCtx = createContext(null);
-export const useAuth = () => useContext(AuthCtx);
+const AuthContext = createContext(null);
 
-const BASE_AUTH = import.meta.env.VITE_API_AUTH || "http://127.0.0.1:8000/api";
+function safeParse(v) {
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+}
 
 export default function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [viewAsMember, setViewAsMember] = useState(false);
+  const [user, setUser] = useState(() => safeParse(localStorage.getItem("user")));
+  const [access, setAccess] = useState(localStorage.getItem("access"));
+  const [refresh, setRefresh] = useState(localStorage.getItem("refresh"));
 
-  // boot from localStorage on refresh
-  useEffect(() => {
-    const t = localStorage.getItem("access");
-    const email = localStorage.getItem("email");
-    const r = localStorage.getItem("role");
-
-    if (t && email) {
-      setUser({ email });
-      if (r) setRole(r);
-    }
-  }, []);
-
-  async function fetchRole(churchId = 1) {
-    try {
-      const { data } = await axios.get(
-        `${BASE_AUTH}/churches/${churchId}/my_role/`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access")}`,
-          },
-        }
-      );
-      setRole(data.role);
-      localStorage.setItem("role", data.role || "");
-    } catch (e) {
-      console.warn("fetchRole failed", e?.response?.data || e.message);
-    }
-  }
-
-  async function login(email, password) {
-    // IMPORTANT: backend now expects { email, password }
-    const { data } = await axios.post(`${BASE_AUTH}/token/`, {
+  // ---------------- LOGIN -----------------
+  const login = async (email, password) => {
+    const res = await axios.post("http://127.0.0.1:8000/api/token/", {
       email,
       password,
     });
 
-    localStorage.setItem("access", data.access);
-    localStorage.setItem("refresh", data.refresh);
-    localStorage.setItem("email", email);
+    console.log("LOGIN RAW RESPONSE:", res.data);
 
-    setUser({ email });
+    const { access: a, refresh: r, user: u } = res.data;
 
-    await fetchRole(1);
-  }
+    if (!u) {
+      console.error("❌ BACKEND DID NOT RETURN USER FIELD!");
+    }
 
-  function logout() {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    localStorage.removeItem("email");
-    localStorage.removeItem("role");
+    // SAVE FULL USER
+    setUser(u);
+    setAccess(a);
+    setRefresh(r);
 
+    localStorage.setItem("user", JSON.stringify(u));
+    localStorage.setItem("access", a);
+    localStorage.setItem("refresh", r);
+
+    return u;
+  };
+
+
+  // ---------------- LOGOUT -----------------
+  const logout = () => {
+    localStorage.clear();
     setUser(null);
-    setRole(null);
-  }
+    setAccess(null);
+    setRefresh(null);
+  };
+
+  // ---------------- TOKEN REFRESH -----------------
+  useEffect(() => {
+    if (!refresh) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await axios.post(
+          "http://127.0.0.1:8000/api/token/refresh/",
+          { refresh }
+        );
+
+        setAccess(res.data.access);
+        localStorage.setItem("access", res.data.access);
+      } catch {
+        logout();
+      }
+    }, 4 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [refresh]);
 
   return (
-    <AuthCtx.Provider
-      value={{ user, role, login, logout, viewAsMember, setViewAsMember }}
-    >
+    <AuthContext.Provider value={{ user, access, refresh, login, logout }}>
       {children}
-    </AuthCtx.Provider>
+    </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
 }

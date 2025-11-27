@@ -39,3 +39,5 @@ A **full-stack platform** built with **Django REST Framework** (backend) and **R
 - JWT authentication via `djangorestframework-simplejwt`  
 - PostgreSQL (or SQLite for local dev)  
 - Custom permission classes for fine-grained role logic  
+
+Check if using correct email**

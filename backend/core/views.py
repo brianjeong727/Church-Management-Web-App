@@ -12,7 +12,7 @@ from .serializers import (
     AttendanceSerializer,
     EmailLoginTokenSerializer,
 )
-from .permissions import IsLeaderOrReadOnly, IsLeaderOwnerOrReadOnly, LEADER_ROLES
+from .permissions import LeadersOnly, LEADER_ROLES
 
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -60,7 +60,6 @@ def signup(request):
     return Response({"message": "Account created"}, status=201)
 
 
-
 # ----------------------------------------------------
 # CHURCHES
 # ----------------------------------------------------
@@ -80,37 +79,76 @@ class ChurchViewSet(viewsets.ModelViewSet):
         return Response({"role": m.role if m else None})
 
 
-
 # ----------------------------------------------------
 # ANNOUNCEMENTS
 # ----------------------------------------------------
 class AnnouncementViewSet(viewsets.ModelViewSet):
-    queryset = Announcement.objects.select_related("church", "created_by").order_by("-created_at")
+    queryset = Announcement.objects.all()   # ← ADD THIS BACK
+
     serializer_class = AnnouncementSerializer
-    permission_classes = [drf_permissions.IsAuthenticated, IsLeaderOrReadOnly]
+    permission_classes = [drf_permissions.IsAuthenticated, LeadersOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        membership = Membership.objects.filter(user=user).first()
+
+        if not membership:
+            return Announcement.objects.none()
+
+        return Announcement.objects.filter(
+            church=membership.church
+        ).select_related("church", "created_by")
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        user = self.request.user
+        membership = Membership.objects.filter(user=user).first()
+
+        serializer.save(
+            created_by=user,
+            church=membership.church
+        )
+
 
 
 
 # ----------------------------------------------------
 # EVENTS
+#   Leaders only (pastor/deacon)
+#   No 'owner' requirement
+#   Auto-fill church + created_by
 # ----------------------------------------------------
 class EventViewSet(viewsets.ModelViewSet):
-    queryset = Event.objects.select_related("church", "created_by").order_by("-starts_at")
-    serializer_class = EventSerializer
-    permission_classes = [drf_permissions.IsAuthenticated, IsLeaderOwnerOrReadOnly]
+    queryset = Event.objects.all()
 
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+    serializer_class = EventSerializer
+    permission_classes = [drf_permissions.IsAuthenticated, LeadersOnly]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        user = self.request.user
+
+        membership = Membership.objects.filter(user=user).first()
+        if not membership:
+            return Event.objects.none()
+
+        qs = Event.objects.filter(church=membership.church).select_related(
+            "church", "created_by"
+        )
+
+        # optional filter: ?mine=1
         mine = self.request.query_params.get("mine")
         if mine and mine != "0":
-            qs = qs.filter(created_by=self.request.user)
+            qs = qs.filter(created_by=user)
+
         return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        membership = Membership.objects.filter(user=user).first()
+
+        serializer.save(
+            created_by=user,
+            church=membership.church
+        )
 
 
 
@@ -123,25 +161,18 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     permission_classes = [drf_permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        user = self.request.user
+        membership = Membership.objects.filter(user=user).first()
+        if not membership:
+            return Attendance.objects.none()
+
+        qs = Attendance.objects.filter(event__church=membership.church).select_related(
+            "event", "user"
+        )
 
         event_id = self.request.query_params.get("event")
-
         if event_id:
             qs = qs.filter(event_id=event_id)
-            event = Event.objects.filter(id=event_id).select_related("church").first()
-
-            if event:
-                membership = Membership.objects.filter(
-                    user=self.request.user,
-                    church=event.church
-                ).first()
-
-                if not (membership and membership.role in LEADER_ROLES):
-                    qs = qs.filter(user=self.request.user)
-
-        else:
-            qs = qs.filter(user=self.request.user)
 
         return qs
 

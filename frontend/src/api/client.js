@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // Prefer env var. Fallback to local dev.
-const BASE_URL = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api";
+const BASE_URL = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api/";
 
 const client = axios.create({
   baseURL: BASE_URL

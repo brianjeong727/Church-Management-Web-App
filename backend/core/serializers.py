@@ -35,6 +35,20 @@ class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = ["id", "church", "title", "body", "created_by", "created_at"]
+        read_only_fields = ["church", "created_by"]
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+
+        membership = Membership.objects.filter(user=user).first()
+        if not membership:
+            raise serializers.ValidationError(
+                {"error": "You must belong to a church to create announcements."}
+            )
+
+        validated_data["church"] = membership.church
+        validated_data["created_by"] = user
+        return super().create(validated_data)
 
 
 # ---------------------------
@@ -54,10 +68,23 @@ class EventSerializer(serializers.ModelSerializer):
             "location",
             "created_by",
         ]
+        read_only_fields = ["church", "created_by"]
 
     def create(self, validated_data):
-        validated_data["created_by"] = self.context["request"].user
+        user = self.context["request"].user
+
+        membership = Membership.objects.filter(user=user).first()
+        if not membership:
+            raise serializers.ValidationError(
+                {"error": "You must belong to a church to create an event."}
+            )
+
+        validated_data["church"] = membership.church
+        validated_data["created_by"] = user
+
         return super().create(validated_data)
+
+
 
 
 # ---------------------------

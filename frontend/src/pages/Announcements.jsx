@@ -5,8 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 
 export default function Announcements() {
   const { user } = useAuth();
-  const isLeader =
-    user?.role === "pastor" || user?.role === "deacon";
+  const isLeader = user?.role === "pastor" || user?.role === "deacon";
 
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({
@@ -16,7 +15,9 @@ export default function Announcements() {
   });
   const [error, setError] = useState("");
 
-  // Load announcements
+  // ------------------------------
+  // LOAD ANNOUNCEMENTS
+  // ------------------------------
   useEffect(() => {
     client
       .get("announcements/")
@@ -24,7 +25,9 @@ export default function Announcements() {
       .catch(() => setError("Failed to load announcements"));
   }, []);
 
-  // Create new announcement
+  // ------------------------------
+  // CREATE ANNOUNCEMENT
+  // ------------------------------
   async function create() {
     setError("");
     try {
@@ -33,6 +36,20 @@ export default function Announcements() {
       setForm({ ...form, title: "", body: "" });
     } catch (err) {
       setError("Only pastors or deacons can post announcements.");
+    }
+  }
+
+  // ------------------------------
+  // DELETE ANNOUNCEMENT (LEADER ONLY)
+  // ------------------------------
+  async function deleteAnnouncement(id) {
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
+
+    try {
+      await client.delete(`announcements/${id}/`);
+      setItems(items.filter((a) => a.id !== id));
+    } catch (err) {
+      setError("Only pastors or deacons can delete announcements.");
     }
   }
 
@@ -75,8 +92,18 @@ export default function Announcements() {
         {items.map((a) => (
           <div
             key={a.id}
-            className="bg-white shadow p-4 rounded-lg border"
+            className="bg-white shadow p-4 rounded-lg border relative"
           >
+            {/* DELETE BUTTON (leader only) */}
+            {isLeader && (
+              <button
+                className="absolute top-3 right-3 text-red-600 hover:text-red-900 text-xl"
+                onClick={() => deleteAnnouncement(a.id)}
+              >
+                ✕
+              </button>
+            )}
+
             <h2 className="text-xl font-semibold">{a.title}</h2>
             <p className="text-gray-700 mt-1">{a.body}</p>
 

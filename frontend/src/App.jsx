@@ -17,6 +17,7 @@ import Dashboard from "./pages/Dashboard";
 import Announcements from "./pages/Announcements";
 import Events from "./pages/Events";
 import Attendance from "./pages/Attendance";
+import CommunityChat from "./pages/CommunityChat";   // <-- NEW
 
 export default function App() {
   return (
@@ -64,6 +65,16 @@ export default function App() {
             element={
               <RequireAuth>
                 <Attendance />
+              </RequireAuth>
+            }
+          />
+
+          {/* NEW: Community Chat page */}
+          <Route
+            path="/chat"
+            element={
+              <RequireAuth>
+                <CommunityChat />
               </RequireAuth>
             }
           />

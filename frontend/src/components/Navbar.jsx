@@ -7,21 +7,23 @@ export default function Navbar() {
   const isLoggedIn = Boolean(user || token);
 
   return (
-    <nav className="
-      w-full 
-      bg-[linear-gradient(90deg,#3b0764,#312e81)] 
-      text-white 
-      shadow-lg 
-      px-8 py-4 
-      flex items-center
-    ">
+    <nav
+      className="
+        w-full 
+        bg-[linear-gradient(90deg,#3b0764,#312e81)] 
+        text-white 
+        shadow-lg 
+        px-8 py-4 
+        flex items-center
+      "
+    >
       {/* LEFT — Brand */}
       <div className="flex items-center gap-3">
         {/* Clean minimal cross icon */}
         <div className="w-7 h-7 bg-white/15 rounded-md flex items-center justify-center border border-white/20 backdrop-blur-sm">
           <div
             className="w-4 h-4 border-2 border-white opacity-80"
-            style={{ borderLeft: "none", borderBottom: "none" }}
+            style={{ borderLeft: 'none', borderBottom: 'none' }}
           ></div>
         </div>
 
@@ -41,21 +43,39 @@ export default function Navbar() {
         <div className="flex items-center gap-8 text-lg font-medium">
 
           {/* Navigation */}
-          <Link to="/" className="hover:text-purple-200 transition">Dashboard</Link>
-          <Link to="/announcements" className="hover:text-purple-200 transition">Announcements</Link>
-          <Link to="/events" className="hover:text-purple-200 transition">Events</Link>
-          <Link to="/attendance" className="hover:text-purple-200 transition">Attendance</Link>
+          <Link to="/" className="hover:text-purple-200 transition">
+            Dashboard
+          </Link>
+
+          {/* NEW — Community Chat */}
+          <Link to="/chat" className="hover:text-purple-200 transition">
+            Community Chat
+          </Link>
+          
+          <Link to="/announcements" className="hover:text-purple-200 transition">
+            Announcements
+          </Link>
+
+          <Link to="/events" className="hover:text-purple-200 transition">
+            Events
+          </Link>
+
+          <Link to="/attendance" className="hover:text-purple-200 transition">
+            Attendance
+          </Link>
 
           {/* Profile badge */}
-          <div className="
-            px-4 py-1 
-            bg-white/10 
-            border border-white/20 
-            rounded-full 
-            backdrop-blur-xl 
-            text-sm font-medium
-            shadow-sm
-          ">
+          <div
+            className="
+              px-4 py-1 
+              bg-white/10 
+              border border-white/20 
+              rounded-full 
+              backdrop-blur-xl 
+              text-sm font-medium
+              shadow-sm
+            "
+          >
             {user?.full_name || user?.email}
           </div>
 
@@ -75,7 +95,6 @@ export default function Navbar() {
           >
             Logout
           </button>
-
         </div>
       ) : (
         <div className="flex items-center gap-4 text-lg font-medium">

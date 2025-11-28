@@ -1,9 +1,11 @@
-// tailwind.config.js
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  future: {
+    disableLightningCSS: true, // ← FIX for Vercel, does NOT affect your theme
+  },
   theme: {
     extend: {
       colors: {
@@ -24,16 +26,15 @@ export default {
           dark: "#C49F51",
         },
 
-        // ✨ NEUTRALS (Premium + Sacred Visual Vibe) ✨
-        linen: "#F7F3ED",     // soft holy parchment
-        stone: "#E8E4DB",     // clean neutral for cards/sections
-        midnight: "#1C1A27",  // deep ink — perfect text/headers
+        // ✨ NEUTRALS ✨
+        linen: "#F7F3ED",
+        stone: "#E8E4DB",
+        midnight: "#1C1A27",
       },
 
-      // Optional: soft shadow + font upgrades for a divine feel
       boxShadow: {
-        glow: "0 0 12px rgba(232, 193, 114, 0.45)", // gold glow
-        soft: "0 2px 6px rgba(0,0,0,0.08)",         // subtle card shadow
+        glow: "0 0 12px rgba(232, 193, 114, 0.45)",
+        soft: "0 2px 6px rgba(0,0,0,0.08)",
       },
 
       fontFamily: {

@@ -1,37 +1,43 @@
 services:
+  # ======================
+  # BACKEND (Django)
+  # ======================
   - type: web
     name: central-backend
     env: python
     rootDir: backend
-    buildCommand: "./venv/bin/pip install -r requirements.txt"
+
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT"
 
     plan: free
 
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.11.6"
 
-      # Replace this with your own secret key
       - key: DJANGO_SECRET_KEY
-        generateValue: true
+        value: "django-insecure-4pghhe(ggko)+ga&nc#=^#2dy=28i-la4l6!kve2l3ov4d1g=2"
 
       - key: DJANGO_SETTINGS_MODULE
-        value: backend.settings
+        value: "backend.settings"
 
-      # Important for Render file serving
       - key: WEB_CONCURRENCY
         value: "2"
 
-
+  # ======================
+  # FRONTEND (React)
+  # ======================
   - type: web
     name: central-frontend
     env: node
     rootDir: frontend
+
     buildCommand: "npm install && npm run build"
     startCommand: "npx serve -s dist -l $PORT"
 
     plan: free
+
     envVars:
       - key: NODE_VERSION
         value: "18"

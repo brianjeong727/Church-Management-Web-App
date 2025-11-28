@@ -1,13 +1,15 @@
 // src/api/client.js
 import axios from "axios";
 
-// Prefer env var. Fallback to local dev.
+// Prefer environment variable; fallback to local dev API URL
 const BASE_URL = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api/";
 
 const client = axios.create({
-  baseURL: BASE_URL
+  baseURL: BASE_URL,
+  withCredentials: false,
 });
 
+// ========= AUTH REQUEST INTERCEPTOR ========= //
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem("access");
   if (token) {
@@ -16,23 +18,31 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Try refreshing token if we get a 401
+// ========= TOKEN REFRESH LOGIC ========= //
 let isRefreshing = false;
-let pending = [];
+let queuedRequests = [];
 
-function subscribeTokenRefresh(cb) {
-  pending.push(cb);
-}
-function onRefreshed(newToken) {
-  pending.forEach((cb) => cb(newToken));
-  pending = [];
-}
+// Add a request to queue (waiting for new token)
+const subscribeToRefresh = (cb) => {
+  queuedRequests.push(cb);
+};
 
+// Execute all queued requests after token refresh
+const processQueue = (newToken) => {
+  queuedRequests.forEach((cb) => cb(newToken));
+  queuedRequests = [];
+};
+
+// ========= RESPONSE INTERCEPTOR ========= //
 client.interceptors.response.use(
-  (res) => res,
+  (response) => response,
+
   async (error) => {
     const original = error.config;
-    // If unauthorized and we haven't retried yet
+
+    // Only try refreshing access token when:
+    // - Response is 401
+    // - We didn't already retry this request
     if (
       error.response &&
       error.response.status === 401 &&
@@ -40,41 +50,50 @@ client.interceptors.response.use(
     ) {
       original._retry = true;
       const refresh = localStorage.getItem("refresh");
+
       if (!refresh) {
-        // no refresh token → log out upstream
-        return Promise.reject(error);
+        return Promise.reject(error); // No refresh token → logout
       }
 
+      // If refresh is already in progress → queue this request
       if (isRefreshing) {
-        // queue until refresh finishes
         return new Promise((resolve) => {
-          subscribeTokenRefresh((newToken) => {
+          subscribeToRefresh((newToken) => {
             original.headers.Authorization = `Bearer ${newToken}`;
             resolve(client(original));
           });
         });
       }
 
+      // Start a refresh
       isRefreshing = true;
+
       try {
-        const refreshRes = await axios.post(
+        const response = await axios.post(
           `${BASE_URL.replace(/\/$/, "")}/token/refresh/`,
           { refresh }
         );
-        const newAccess = refreshRes.data.access;
+
+        const newAccess = response.data.access;
         localStorage.setItem("access", newAccess);
+
         isRefreshing = false;
-        onRefreshed(newAccess);
+        processQueue(newAccess);
+
+        // Retry original request with new token
         original.headers.Authorization = `Bearer ${newAccess}`;
         return client(original);
-      } catch (e) {
+      } catch (refreshError) {
         isRefreshing = false;
-        // refresh failed → clear tokens
+
+        // Refresh token expired → logout fully
         localStorage.removeItem("access");
         localStorage.removeItem("refresh");
-        return Promise.reject(e);
+
+        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );

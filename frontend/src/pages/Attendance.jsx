@@ -1,19 +1,17 @@
-// src/pages/Attendance.jsx
 import { useEffect, useState } from "react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 export default function Attendance() {
   const { user } = useAuth();
-  const isLeader =
-    user?.role === "pastor" || user?.role === "deacon";
+  const isLeader = user?.role === "pastor" || user?.role === "deacon";
 
   const [events, setEvents] = useState([]);
   const [eventId, setEventId] = useState("");
   const [rows, setRows] = useState([]);
   const [error, setError] = useState("");
 
-  // Load events once
+  // Load events
   useEffect(() => {
     client
       .get("events/")
@@ -21,23 +19,56 @@ export default function Attendance() {
       .catch(() => setError("Failed to load events."));
   }, []);
 
-  // Load attendance when event changes
+  // Load attendance for selected event
   useEffect(() => {
     if (!eventId) return;
-    client
-      .get(`attendance/?event=${eventId}`)
-      .then((res) => setRows(res.data))
-      .catch(() => setError("Failed to load attendance."));
-  }, [eventId]);
 
+    client
+      .get(`events/${eventId}/attendance/`)
+      .then((res) => {
+        if (isLeader) {
+          // Leaders get full list (array)
+          setRows(Array.isArray(res.data) ? res.data : []);
+        } else {
+          // Members get only their own record
+          if (!res.data?.signed_up) {
+            setRows([]); // not checked in
+          } else {
+            setRows([
+              {
+                id: 0,
+                user: { full_name: user.full_name, email: user.email },
+                status: res.data.status,
+                timestamp: res.data.timestamp,
+              },
+            ]);
+          }
+        }
+      })
+      .catch(() => setError("Failed to load attendance."));
+  }, [eventId, isLeader, user]);
+
+  // Member check-in
   async function checkIn() {
     try {
-      await client.post("attendance/", {
-        event: Number(eventId),
+      await client.post(`events/${eventId}/attendance/`, {
         status: "in",
       });
-      const res = await client.get(`attendance/?event=${eventId}`);
-      setRows(res.data);
+
+      // reload
+      const res = await client.get(`events/${eventId}/attendance/`);
+      if (isLeader) {
+        setRows(Array.isArray(res.data) ? res.data : []);
+      } else {
+        setRows([
+          {
+            id: 0,
+            user: { full_name: user.full_name, email: user.email },
+            status: res.data.status,
+            timestamp: res.data.timestamp,
+          },
+        ]);
+      }
     } catch {
       setError("Failed to check in.");
     }
@@ -47,13 +78,14 @@ export default function Attendance() {
     (e) => String(e.id) === String(eventId)
   );
 
+  const totalCount = rows.length;
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Attendance</h1>
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      {/* Event dropdown */}
       <div className="mb-6">
         <label className="block mb-2 font-medium">Select Event</label>
         <select
@@ -70,12 +102,17 @@ export default function Attendance() {
         </select>
       </div>
 
-      {/* Attendance table */}
       {eventId && (
         <>
-          <h2 className="text-xl font-semibold mb-4">
+          <h2 className="text-xl font-semibold mb-3">
             {selectedEvent?.title}
           </h2>
+
+          {isLeader && (
+            <p className="mb-3 text-gray-700 font-medium">
+              Total Checked In: {totalCount}
+            </p>
+          )}
 
           <div className="overflow-x-auto shadow border rounded-lg">
             <table className="w-full border-collapse">
@@ -98,8 +135,8 @@ export default function Attendance() {
                   </tr>
                 )}
 
-                {rows.map((r) => (
-                  <tr key={r.id} className="odd:bg-white even:bg-gray-50">
+                {rows.map((r, i) => (
+                  <tr key={i} className="odd:bg-white even:bg-gray-50">
                     <td className="py-2 px-3 border-b">
                       {r.user?.full_name || r.user?.email}
                     </td>
@@ -107,7 +144,9 @@ export default function Attendance() {
                       {r.status}
                     </td>
                     <td className="py-2 px-3 border-b">
-                      {new Date(r.timestamp).toLocaleString()}
+                      {r.timestamp
+                        ? new Date(r.timestamp).toLocaleString()
+                        : ""}
                     </td>
                   </tr>
                 ))}
@@ -115,7 +154,6 @@ export default function Attendance() {
             </table>
           </div>
 
-          {/* Check-in button for members ONLY */}
           {!isLeader && (
             <button
               onClick={checkIn}

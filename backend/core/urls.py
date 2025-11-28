@@ -5,19 +5,28 @@ from .views import (
     ChurchViewSet,
     AnnouncementViewSet,
     EventViewSet,
-    AttendanceViewSet,
-    MyTokenObtainPairView,   # ← login
-    signup,                  # ← signup
+    MyTokenObtainPairView,
+    RegisterChurchView,
+    RegisterMemberView,
+    EventAttendanceView,   # <-- normal APIView, NOT in router
 )
 
 router = DefaultRouter()
 router.register("churches", ChurchViewSet)
 router.register("announcements", AnnouncementViewSet)
 router.register("events", EventViewSet)
-router.register("attendance", AttendanceViewSet)
 
 urlpatterns = [
+    # LOGIN
     path("token/", MyTokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("signup/", signup, name="signup"),
+
+    # SIGNUP
+    path("auth/register_church/", RegisterChurchView.as_view(), name="register_church"),
+    path("auth/register_member/", RegisterMemberView.as_view(), name="register_member"),
+
+    # ATTENDANCE (normal APIView, NOT router)
+    path("events/<int:event_id>/attendance/", EventAttendanceView.as_view()),
+
+    # ROUTER
     path("", include(router.urls)),
 ]

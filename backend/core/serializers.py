@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from .models import User, Church, Membership, Announcement, Event, Attendance
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
-# ---------------------------
-# USER / CHURCH / MEMBERSHIP
-# ---------------------------
+# ======================================================
+# USER / CHURCH / MEMBERSHIP SERIALIZERS
+# ======================================================
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -14,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ChurchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Church
-        fields = ["id", "name", "location"]
+        fields = ["id", "name", "location", "denomination", "size"]
 
 
 class MembershipSerializer(serializers.ModelSerializer):
@@ -26,9 +28,10 @@ class MembershipSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "church", "role"]
 
 
-# ---------------------------
-# ANNOUNCEMENTS
-# ---------------------------
+# ======================================================
+# ANNOUNCEMENT SERIALIZER
+# ======================================================
+
 class AnnouncementSerializer(serializers.ModelSerializer):
     created_by = UserSerializer(read_only=True)
 
@@ -48,12 +51,14 @@ class AnnouncementSerializer(serializers.ModelSerializer):
 
         validated_data["church"] = membership.church
         validated_data["created_by"] = user
+
         return super().create(validated_data)
 
 
-# ---------------------------
-# EVENTS
-# ---------------------------
+# ======================================================
+# EVENT SERIALIZER
+# ======================================================
+
 class EventSerializer(serializers.ModelSerializer):
     created_by = UserSerializer(read_only=True)
 
@@ -85,11 +90,10 @@ class EventSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+# ======================================================
+# ATTENDANCE SERIALIZER
+# ======================================================
 
-
-# ---------------------------
-# ATTENDANCE
-# ---------------------------
 class AttendanceSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
 
@@ -102,61 +106,36 @@ class AttendanceSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         event = validated_data["event"]
         status = validated_data.get("status", "in")
-        record, _ = Attendance.objects.update_or_create(
-            user=user, event=event, defaults={"status": status}
-        )
-        return record
 
-
-# ---------------------------
-# SIGNUP
-# ---------------------------
-class SignupSerializer(serializers.Serializer):
-    full_name = serializers.CharField()
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
-    church_id = serializers.IntegerField()
-    role = serializers.CharField()
-
-    def create(self, validated_data):
-        email = validated_data["email"]
-        
-        # check duplicate
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError({"email": "Email already exists"})
-
-        from .models import Church
-        church = Church.objects.get(id=validated_data["church_id"])
-        role = validated_data.get("role", "member").lower()
-
-        user = User.objects.create_user(
-            email=email,
-            full_name=validated_data.get("full_name", ""),
-            password=validated_data["password"],
-        )
-
-        Membership.objects.create(
+        attendance, created = Attendance.objects.update_or_create(
             user=user,
-            church=church,
-            role=role,
+            event=event,
+            defaults={"status": status}
         )
+        return attendance
 
-        return user
+
+class EventAttendanceListSerializer(serializers.ModelSerializer):
+    attendances = AttendanceSerializer(many=True, read_only=True)
+    total_attendees = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
+        fields = ["id", "title", "starts_at", "ends_at", "attendances", "total_attendees"]
+
+    def get_total_attendees(self, obj):
+        return obj.attendances.count()
 
 
-# ---------------------------
-# LOGIN USING EMAIL
-# ---------------------------
 
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Membership
+# ======================================================
+# EMAIL LOGIN SERIALIZER (SimpleJWT)
+# ======================================================
 
 class EmailLoginTokenSerializer(TokenObtainPairSerializer):
     username_field = "email"
 
     def validate(self, attrs):
-        print("🔥🔥 CUSTOM SERIALIZER IS BEING USED 🔥🔥")
-
         attrs["username"] = attrs.get("email")
         data = super().validate(attrs)
 
@@ -173,3 +152,80 @@ class EmailLoginTokenSerializer(TokenObtainPairSerializer):
         }
 
         return data
+
+
+# ======================================================
+# REGISTER CHURCH SERIALIZER
+# ======================================================
+
+class RegisterChurchSerializer(serializers.Serializer):
+    church_name = serializers.CharField()
+    location = serializers.CharField(required=False, allow_blank=True)
+    denomination = serializers.CharField(required=False, allow_blank=True)
+    size = serializers.IntegerField(required=False)
+
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "A pastor account already exists for this email. "
+                "Pastors may only register one church."
+            )
+        return value
+
+    def create(self, validated_data):
+        # Extract church fields
+        church = Church.objects.create(
+            name=validated_data["church_name"],
+            location=validated_data.get("location", ""),
+            denomination=validated_data.get("denomination", ""),
+            size=validated_data.get("size")
+        )
+
+        # Create the pastor user
+        user = User.objects.create_user(
+            email=validated_data["email"],
+            password=validated_data["password"],
+            full_name=validated_data["full_name"],
+        )
+
+        # Create membership (pastor)
+        Membership.objects.create(
+            user=user,
+            church=church,
+            role="pastor"
+        )
+
+        return user
+
+
+
+# ======================================================
+# REGISTER MEMBER SERIALIZER
+# ======================================================
+
+class RegisterMemberSerializer(serializers.Serializer):
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+    church_id = serializers.IntegerField()
+
+    def create(self, validated_data):
+        church = Church.objects.get(id=validated_data["church_id"])
+
+        user = User.objects.create_user(
+            email=validated_data["email"],
+            password=validated_data["password"],
+            full_name=validated_data["full_name"],
+        )
+
+        Membership.objects.create(
+            user=user,
+            church=church,
+            role="member"
+        )
+
+        return user

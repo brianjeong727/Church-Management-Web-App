@@ -5,12 +5,18 @@ import RequireAuth from "./auth/RequireAuth";
 
 import Navbar from "./components/Navbar";
 
+// Auth pages
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import SignupMember from "./pages/SignupMember";
+import SignupChurch from "./pages/SignupChurch";
+import ChooseChurch from "./pages/ChooseChurch";
+
+// Protected pages
 import Dashboard from "./pages/Dashboard";
 import Announcements from "./pages/Announcements";
 import Events from "./pages/Events";
 import Attendance from "./pages/Attendance";
-import Signup from "./pages/Signup";
 
 export default function App() {
   return (
@@ -19,8 +25,16 @@ export default function App() {
         <Navbar />
 
         <Routes>
+          {/* Multi-step signup pages */}
           <Route path="/signup" element={<Signup />} />
+          <Route path="/signup/member" element={<SignupMember />} />
+          <Route path="/signup/member/church" element={<ChooseChurch />} />
+          <Route path="/signup/church" element={<SignupChurch />} />
+
+          {/* Login */}
           <Route path="/login" element={<Login />} />
+
+          {/* Protected */}
           <Route
             path="/"
             element={

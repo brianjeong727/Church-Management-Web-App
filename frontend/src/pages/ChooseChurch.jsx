@@ -1,144 +1,74 @@
-import { useEffect, useState } from "react";
+// src/pages/ChooseChurch.jsx
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
-const BASE = import.meta.env.VITE_API_AUTH || "http://127.0.0.1:8000/api";
+const BASE = "http://127.0.0.1:8000/api";
 
 export default function ChooseChurch() {
-  const [myChurches, setMyChurches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [joinId, setJoinId] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newLocation, setNewLocation] = useState("");
+  const nav = useNavigate();
+  const { state } = useLocation(); 
+
+  // If user got here without step 1, redirect
+  if (!state) {
+    nav("/signup/member");
+  }
+
+  const { fullName, email, password } = state;
+
+  const [churches, setChurches] = useState([]);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
 
-  const nav = useNavigate();
-
   useEffect(() => {
-    fetchMine();
+    axios.get(`${BASE}/churches/`).then((res) => setChurches(res.data));
   }, []);
 
-  async function fetchMine() {
+  async function submitSignup(church_id) {
     try {
-      const token = localStorage.getItem("access");
-      const { data } = await axios.get(`${BASE}/churches/mine/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      await axios.post(`${BASE}/auth/register_member/`, {
+        full_name: fullName,
+        email,
+        password,
+        church_id,
       });
-      setMyChurches(data);
+
+      nav("/login");
     } catch (err) {
-      console.error(err);
-      setError(err?.response?.data?.detail || "Error loading churches");
-    }
-    setLoading(false);
-  }
-
-  function selectChurch(churchId) {
-    localStorage.setItem("churchId", churchId);
-    nav("/dashboard");
-  }
-
-  async function joinChurch(e) {
-    e.preventDefault();
-    setError("");
-
-    try {
-      const token = localStorage.getItem("access");
-      const { data } = await axios.post(
-        `${BASE}/churches/join/`,
-        { church_id: joinId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Immediately select the church after joining
-      localStorage.setItem("churchId", data.id);
-      nav("/dashboard");
-    } catch (err) {
-      console.error("Join failed", err?.response || err);
-      setError(err?.response?.data?.detail || "Failed to join church");
+      setError(err.response?.data?.detail || "Signup failed");
     }
   }
 
-  async function createChurch(e) {
-    e.preventDefault();
-    setError("");
-
-    try {
-      const token = localStorage.getItem("access");
-      const { data } = await axios.post(
-        `${BASE}/churches/`,
-        { name: newName, location: newLocation },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // User becomes pastor of the new church → select it
-      localStorage.setItem("churchId", data.id);
-      nav("/dashboard");
-    } catch (err) {
-      console.error("Create failed", err?.response || err);
-      setError(err?.response?.data?.detail || "Failed to create church");
-    }
-  }
-
-  if (loading) return <p style={{ padding: 20 }}>Loading churches...</p>;
+  const filtered = churches.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div style={{ maxWidth: 500, margin: "2rem auto", display: "grid", gap: 20 }}>
-      <h2>Choose Your Church</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-6">
+      <div className="bg-white shadow-md rounded-xl p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-center">Choose Your Church</h1>
 
-      {error && <div style={{ color: "red" }}>{error}</div>}
+        <input
+          placeholder="Search churches..."
+          className="w-full border rounded-lg px-3 py-2 mb-4"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
-      {/* Existing churches */}
-      {myChurches.length > 0 && (
-        <div>
-          <h3>Your Churches</h3>
-          {myChurches.map((c) => (
-            <div
-              key={c.church_id}
-              onClick={() => selectChurch(c.church_id)}
-              style={{
-                padding: 12,
-                marginBottom: 10,
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
+        {error && <p className="text-red-500 mb-3">{error}</p>}
+
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {filtered.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => submitSignup(c.id)}
+              className="w-full border p-3 rounded-lg text-left hover:bg-gray-100"
             >
-              <strong>{c.church_name}</strong>
-              <div>Your role: {c.role}</div>
-            </div>
+              <strong>{c.name}</strong>
+              <div className="text-gray-600 text-sm">{c.location}</div>
+            </button>
           ))}
         </div>
-      )}
-
-      {/* Join church */}
-      <div>
-        <h3>Join a Church</h3>
-        <form onSubmit={joinChurch} style={{ display: "grid", gap: 10 }}>
-          <input
-            placeholder="Church ID"
-            value={joinId}
-            onChange={(e) => setJoinId(e.target.value)}
-          />
-          <button type="submit">Join</button>
-        </form>
-      </div>
-
-      {/* Create church */}
-      <div>
-        <h3>Create a New Church</h3>
-        <form onSubmit={createChurch} style={{ display: "grid", gap: 10 }}>
-          <input
-            placeholder="Church Name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <input
-            placeholder="Location (optional)"
-            value={newLocation}
-            onChange={(e) => setNewLocation(e.target.value)}
-          />
-          <button type="submit">Create Church</button>
-        </form>
       </div>
     </div>
   );

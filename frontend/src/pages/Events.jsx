@@ -60,6 +60,20 @@ export default function Events() {
       }
     }
   }
+  // ------------------------------
+  // DELETE EVENT (LEADER ONLY)
+  // ------------------------------
+  async function deleteEvent(id) {
+    if (!confirm("Are you sure you want to delete this event?")) return;
+
+    try {
+      await client.delete(`events/${id}/`);
+      setItems(items.filter((event) => event.id !== id));
+    } catch (err) {
+      console.log("DELETE ERR:", err.response?.data);
+      setError("Only pastors or deacons can delete events.");
+    }
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -119,9 +133,23 @@ export default function Events() {
         {items.length === 0 && <p>No events yet.</p>}
 
         {items.map((e) => (
-          <div key={e.id} className="bg-white shadow p-4 rounded-lg border">
+          <div
+            key={e.id}
+            className="bg-white shadow p-4 rounded-lg border relative"
+          >
+            {/* DELETE BUTTON (leader only) */}
+            {isLeader && (
+              <button
+                className="absolute top-3 right-3 text-red-600 hover:text-red-900 text-xl"
+                onClick={() => deleteEvent(e.id)}
+              >
+                ✕
+              </button>
+            )}
+
             <h2 className="text-xl font-semibold">{e.title}</h2>
             <p className="text-gray-700 mt-1">{e.location}</p>
+
             <p className="text-gray-500 text-sm mt-2">
               Starts: {new Date(e.starts_at).toLocaleString()}
             </p>

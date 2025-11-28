@@ -4,45 +4,104 @@ import { useAuth } from "../auth/AuthContext";
 export default function Navbar() {
   const { user, logout } = useAuth();
   const token = localStorage.getItem("access");
-  const isLoggedIn = user || token;
+  const isLoggedIn = Boolean(user || token);
 
   return (
-    <nav className="flex items-center px-6 py-4 border-b bg-white shadow-sm">
-      {/* Left: Navigation links */}
-      <div className="flex items-center gap-8 font-medium text-lg">
-        <Link to="/" className="hover:text-blue-600">Dashboard</Link>
-        <Link to="/announcements" className="hover:text-blue-600">Announcements</Link>
-        <Link to="/events" className="hover:text-blue-600">Events</Link>
-        <Link to="/attendance" className="hover:text-blue-600">Attendance</Link>
+    <nav className="
+      w-full 
+      bg-[linear-gradient(90deg,#3b0764,#312e81)] 
+      text-white 
+      shadow-lg 
+      px-8 py-4 
+      flex items-center
+    ">
+      {/* LEFT — Brand */}
+      <div className="flex items-center gap-3">
+        {/* Clean minimal cross icon */}
+        <div className="w-7 h-7 bg-white/15 rounded-md flex items-center justify-center border border-white/20 backdrop-blur-sm">
+          <div
+            className="w-4 h-4 border-2 border-white opacity-80"
+            style={{ borderLeft: "none", borderBottom: "none" }}
+          ></div>
+        </div>
+
+        <Link
+          to="/"
+          className="text-2xl font-bold tracking-wide hover:opacity-90 transition"
+        >
+          Central
+        </Link>
       </div>
 
-      {/* Push right side to edge */}
+      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Right side */}
-      {!isLoggedIn ? (
-        <div className="flex items-center gap-4">
+      {/* RIGHT — Nav links OR auth buttons */}
+      {isLoggedIn ? (
+        <div className="flex items-center gap-8 text-lg font-medium">
+
+          {/* Navigation */}
+          <Link to="/" className="hover:text-purple-200 transition">Dashboard</Link>
+          <Link to="/announcements" className="hover:text-purple-200 transition">Announcements</Link>
+          <Link to="/events" className="hover:text-purple-200 transition">Events</Link>
+          <Link to="/attendance" className="hover:text-purple-200 transition">Attendance</Link>
+
+          {/* Profile badge */}
+          <div className="
+            px-4 py-1 
+            bg-white/10 
+            border border-white/20 
+            rounded-full 
+            backdrop-blur-xl 
+            text-sm font-medium
+            shadow-sm
+          ">
+            {user?.full_name || user?.email}
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={logout}
+            className="
+              ml-4 px-4 py-2 rounded-lg 
+              bg-white/10 
+              text-white 
+              border border-white/20
+              backdrop-blur 
+              hover:bg-white/20 
+              transition
+              font-medium
+            "
+          >
+            Logout
+          </button>
+
+        </div>
+      ) : (
+        <div className="flex items-center gap-4 text-lg font-medium">
           <Link
             to="/login"
-            className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+            className="
+              px-4 py-2 rounded-lg 
+              bg-white/20 hover:bg-white/30 
+              transition shadow-sm
+            "
           >
             Login
           </Link>
 
           <Link
             to="/signup"
-            className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+            className="
+              px-4 py-2 rounded-lg 
+              bg-purple-600 hover:bg-purple-700 
+              shadow-md 
+              transition
+            "
           >
             Sign Up
           </Link>
         </div>
-      ) : (
-        <button
-          onClick={logout}
-          className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-        >
-          Logout
-        </button>
       )}
     </nav>
   );

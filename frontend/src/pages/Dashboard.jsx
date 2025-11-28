@@ -1,13 +1,11 @@
-// src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
-  // Normalize role safely
   const role = user?.role?.toLowerCase() || null;
   const isLeader = role === "pastor" || role === "deacon";
 
@@ -41,61 +39,50 @@ export default function Dashboard() {
     }
 
     loadCounts();
-    return () => {
-      active = false;
-    };
+    return () => (active = false);
   }, []);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <h1 className="text-3xl font-bold mb-4">Church Dashboard</h1>
+    <div className="min-h-screen px-6 py-12 bg-[linear-gradient(180deg,#3b0764,#312e81)] text-white">
 
-      {/* User Info */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6">
-        <p className="text-gray-700">
-          Signed in as{" "}
-          <span className="font-semibold">
-            {user?.full_name || user?.email}
-          </span>
+      {/* HEADER */}
+      <div className="text-center mb-12">
+        {/* Cross icon */}
+        <div className="mx-auto mb-6 w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center shadow-lg backdrop-blur">
+          <div
+            className="w-8 h-8 border-2 border-white"
+            style={{ borderLeft: "none", borderBottom: "none" }}
+          ></div>
+        </div>
+
+        <h1 className="text-5xl font-extrabold tracking-wide">Central Dashboard</h1>
+
+        <p className="text-purple-200 mt-3 text-lg">
+          Welcome back, <span className="font-semibold text-white">{user?.full_name}</span> —
+          <span className="capitalize"> {user?.role}</span> of{" "}
+          <span className="font-semibold text-white">{user?.church}</span>.
         </p>
-
-        <p className="text-gray-600">
-          Role:{" "}
-          <span className="font-semibold capitalize">
-            {user?.role || "N/A"}
-          </span>
-        </p>
-
-        <p className="text-gray-600">
-          Church:{" "}
-          <span className="font-semibold">
-            {user?.church || "N/A"}
-          </span>
-        </p>
-
-        <button
-          onClick={logout}
-          className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Logout
-        </button>
       </div>
 
-      {/* Loading State */}
-      {loading && <p className="text-gray-500">Loading…</p>}
+      {/* LOADING */}
+      {loading && (
+        <p className="text-purple-200 text-center text-lg">Loading…</p>
+      )}
 
-      {/* Main Actions */}
+      {/* FEATURE CARDS */}
       {!loading && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Announcements */}
-          <Link to="/announcements">
-            <div className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg shadow cursor-pointer">
-              <h2 className="text-xl font-semibold mb-1">Announcements</h2>
-              <p className="text-gray-600">{counts.announcements} total</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
 
+          {/* Announcements */}
+          <Link to="/announcements" className="group">
+            <div
+              className="p-8 rounded-2xl bg-white/10 backdrop-blur-xl 
+            shadow-xl border border-white/20 group-hover:bg-white/20 transition"
+            >
+              <h2 className="text-2xl font-semibold mb-2">Announcements</h2>
+              <p className="text-purple-200">{counts.announcements} total</p>
               {isLeader && (
-                <p className="text-blue-600 font-medium mt-1">
+                <p className="text-purple-300 mt-2 font-medium">
                   You can create announcements
                 </p>
               )}
@@ -103,36 +90,38 @@ export default function Dashboard() {
           </Link>
 
           {/* Events */}
-          <Link to="/events">
-            <div className="p-4 bg-green-50 hover:bg-green-100 rounded-lg shadow cursor-pointer">
-              <h2 className="text-xl font-semibold mb-1">Events</h2>
-              <p className="text-gray-600">{counts.events} events</p>
-
+          <Link to="/events" className="group">
+            <div
+              className="p-8 rounded-2xl bg-white/10 backdrop-blur-xl 
+            shadow-xl border border-white/20 group-hover:bg-white/20 transition"
+            >
+              <h2 className="text-2xl font-semibold mb-2">Events</h2>
+              <p className="text-purple-200">{counts.events} events</p>
               {isLeader && (
-                <p className="text-green-700 font-medium mt-1">
-                  You can create & manage events
+                <p className="text-purple-300 mt-2 font-medium">
+                  Manage church events
                 </p>
               )}
             </div>
           </Link>
 
           {/* Attendance */}
-          <Link to="/attendance">
-            <div className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg shadow cursor-pointer">
-              <h2 className="text-xl font-semibold mb-1">Attendance</h2>
-
-              <p className="text-gray-600">
-                {isLeader
-                  ? "View all attendance"
-                  : "Check yourself in"}
+          <Link to="/attendance" className="group">
+            <div
+              className="p-8 rounded-2xl bg-white/10 backdrop-blur-xl 
+            shadow-xl border border-white/20 group-hover:bg-white/20 transition"
+            >
+              <h2 className="text-2xl font-semibold mb-2">Attendance</h2>
+              <p className="text-purple-200">
+                {isLeader ? "View attendance records" : "Check yourself in"}
               </p>
             </div>
           </Link>
         </div>
       )}
 
-      <p className="text-gray-500 mt-8 text-center">
-        Welcome! Use the cards above to navigate your church tools.
+      <p className="text-purple-300 mt-16 text-center">
+        Use the cards above to navigate your tools.
       </p>
     </div>
   );
